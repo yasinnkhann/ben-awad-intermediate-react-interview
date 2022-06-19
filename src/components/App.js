@@ -144,7 +144,8 @@ function App() {
 
 	const getFilteringRows = locationsArr => {
 		return locationsArr.filter(locationObj => {
-			return Object.values(locationObj).some(value => {
+			const row = Object.values(locationObj);
+			return row.some(value => {
 				return value.toString().toLowerCase().includes(query.toLowerCase());
 			});
 		});
