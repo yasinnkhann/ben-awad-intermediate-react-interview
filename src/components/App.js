@@ -4,7 +4,7 @@ import '../styles/App.css';
 
 function App() {
 	const [isLoaded, setIsLoaded] = useState(false);
-	const [profiles, setProfiles] = useState([]);
+	const [profiles, setProfiles] = useState({});
 
 	const fetchProfiles = async signal => {
 		try {
@@ -15,7 +15,10 @@ function App() {
 				}
 			);
 			console.log(data);
-			setProfiles(data.results);
+			setProfiles({
+				data: data.results,
+				sorting: 'UNSORTED',
+			});
 			setIsLoaded(true);
 		} catch (err) {
 			console.error(err);
@@ -33,7 +36,7 @@ function App() {
 	}
 
 	const getLocationKeys = () => {
-		const locationObj = profiles.map(profile => profile.location)[0];
+		const locationObj = profiles.data.map(profile => profile.location)[0];
 		const locationKeysArr = extractDeepestKeys(locationObj);
 
 		return locationKeysArr;
@@ -71,18 +74,40 @@ function App() {
 		return locationValuesArr;
 	};
 
+	const handleSorting = header => {
+		const profilesCopy = [...profiles.data];
+		console.log(profilesCopy);
+		const sortedProfiles = profilesCopy.sort((a, b) => {
+			console.log(a.location[header], b.location[header]);
+			if (a.location[header] < b.location[header]) {
+				return -1;
+			}
+			if (a.location[header] > b.location[header]) {
+				return 1;
+			}
+			return 0;
+		});
+		console.log(sortedProfiles.map(profile => profile.location[header]));
+		setProfiles(currProfiles => ({
+			...currProfiles,
+			data: sortedProfiles,
+		}));
+	};
+
 	return (
 		<div className='app'>
 			<table>
 				<thead>
 					<tr>
-						{getLocationKeys().map(key => (
-							<th key={key}>{key}</th>
+						{getLocationKeys().map(header => (
+							<th key={header} onClick={() => handleSorting(header)}>
+								{header}
+							</th>
 						))}
 					</tr>
 				</thead>
 				<tbody>
-					{profiles.map(profile => (
+					{profiles.data.map(profile => (
 						<tr key={profile.login.uuid}>
 							{getLocationValues(profile.location).map((val, idx) => (
 								<td key={idx}>{val}</td>
