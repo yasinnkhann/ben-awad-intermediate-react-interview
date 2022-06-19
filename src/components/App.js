@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../styles/App.css';
 
@@ -6,7 +6,6 @@ function App() {
 	const [isLoaded, setIsLoaded] = useState(false);
 	const [profiles, setProfiles] = useState({});
 	const [query, setQuery] = useState('');
-	const inputRef = useRef(null);
 
 	const fetchProfiles = async signal => {
 		try {
@@ -31,24 +30,6 @@ function App() {
 		fetchProfiles(abortController.signal);
 		return () => abortController.abort();
 	}, []);
-
-	// useEffect(() => {
-	// 	if (query.length > 0) {
-	// 		const filteredProfiles = profiles.data.filter(profile => {
-	// 			const row = Object.values(profile.location);
-	// 			// console.log('LV', row);
-	// 			return row.some(value => {
-	// 				// console.log(value.toString().toLowerCase());
-	// 				return value.toString().toLowerCase().includes(query.toLowerCase());
-	// 			});
-	// 		});
-	// 		console.log('filteredProfiles', filteredProfiles);
-	// 		// setProfiles(currProfiles => ({
-	// 		// 	...currProfiles,
-	// 		// 	data: filteredProfiles,
-	// 		// }));
-	// 	}
-	// }, [query]);
 
 	if (!isLoaded) {
 		return <div>Loading...</div>;
@@ -159,36 +140,19 @@ function App() {
 	const handleChange = e => {
 		flattenProfiles();
 		setQuery(e.target.value);
-		// const filteredProfiles = profiles.data.filter(profile => {
-		// 	const row = Object.values(profile.location);
-		// 	return row.some(value => {
-		// 		return value
-		// 			.toString()
-		// 			.toLowerCase()
-		// 			.includes(inputRef.current.value.toLowerCase());
-		// 	});
-		// });
-
-		// console.log('filteredProfiles', filteredProfiles);
-
-		// if (filteredProfiles.length === 0) {
-		// 	setProfiles(currProfiles => ({
-		// 		...currProfiles,
-		// 		data: profiles.data,
-		// 	}));
-		// } else {
-		// 	setProfiles(currProfiles => ({
-		// 		...currProfiles,
-		// 		data: filteredProfiles,
-		// 	}));
-		// }
 	};
 
-	const handleFiltering = () => {};
+	const getFilteringRows = locationsArr => {
+		return locationsArr.filter(locationObj => {
+			return Object.values(locationObj).some(value => {
+				return value.toString().toLowerCase().includes(query.toLowerCase());
+			});
+		});
+	};
 
 	return (
 		<div className='app'>
-			<input type='text' onChange={handleChange} ref={inputRef} />
+			<input type='text' onChange={handleChange} />
 			<table>
 				<thead>
 					<tr>
@@ -200,7 +164,7 @@ function App() {
 					</tr>
 				</thead>
 				<tbody>
-					{flattenLocations().map((location, idx) => (
+					{getFilteringRows(flattenLocations()).map((location, idx) => (
 						<tr key={idx}>
 							{Object.values(location)?.map((val, idx) => (
 								<td key={idx}>{val}</td>
