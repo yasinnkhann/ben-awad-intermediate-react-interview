@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import '../styles/App.css';
 
 function App() {
 	const [isLoaded, setIsLoaded] = useState(false);
 	const [profiles, setProfiles] = useState({});
+	const [query, setQuery] = useState('');
+	const inputRef = useRef(null);
 
 	const fetchProfiles = async signal => {
 		try {
@@ -14,7 +16,6 @@ function App() {
 					signal,
 				}
 			);
-			console.log(data);
 			setProfiles({
 				data: data.results,
 				sorting: 'UNSORTED',
@@ -30,6 +31,24 @@ function App() {
 		fetchProfiles(abortController.signal);
 		return () => abortController.abort();
 	}, []);
+
+	// useEffect(() => {
+	// 	if (query.length > 0) {
+	// 		const filteredProfiles = profiles.data.filter(profile => {
+	// 			const row = Object.values(profile.location);
+	// 			// console.log('LV', row);
+	// 			return row.some(value => {
+	// 				// console.log(value.toString().toLowerCase());
+	// 				return value.toString().toLowerCase().includes(query.toLowerCase());
+	// 			});
+	// 		});
+	// 		console.log('filteredProfiles', filteredProfiles);
+	// 		// setProfiles(currProfiles => ({
+	// 		// 	...currProfiles,
+	// 		// 	data: filteredProfiles,
+	// 		// }));
+	// 	}
+	// }, [query]);
 
 	if (!isLoaded) {
 		return <div>Loading...</div>;
@@ -74,32 +93,106 @@ function App() {
 		return locationValuesArr;
 	};
 
-	const handleSorting = header => {
+	const flattenProfiles = () => {
+		const flattenedLocations = flattenLocations();
 		const profilesCopy = [...profiles.data];
-		console.log(profilesCopy);
-		const sortedProfiles = profilesCopy.sort((a, b) => {
-			console.log(a.location[header], b.location[header]);
-			if (a.location[header] < b.location[header]) {
-				return -1;
+		for (let i = 0; i < profilesCopy.length; i++) {
+			const location = flattenedLocations[i];
+			profilesCopy[i].location = location;
+		}
+
+		setProfiles(currProfiles => ({
+			...currProfiles,
+			data: profilesCopy,
+		}));
+	};
+
+	const handleSorting = header => {
+		flattenProfiles();
+
+		const copyProfiles = [...profiles.data];
+
+		const sortedProfiles = copyProfiles.sort((a, b) => {
+			const aVal = a.location[header];
+			const bVal = b.location[header];
+			if (profiles.sorting === 'DESC' || profiles.sorting === 'UNSORTED') {
+				setProfiles(currProfiles => ({
+					...currProfiles,
+					sorting: 'ASC',
+				}));
+				return aVal > bVal ? 1 : -1;
+			} else {
+				setProfiles(currProfiles => ({
+					...currProfiles,
+					sorting: 'DESC',
+				}));
+				return aVal < bVal ? 1 : -1;
 			}
-			if (a.location[header] > b.location[header]) {
-				return 1;
-			}
-			return 0;
 		});
-		console.log(sortedProfiles.map(profile => profile.location[header]));
+		setProfiles(currProfiles => ({
+			...currProfiles,
+			data: sortedProfiles,
+		}));
+
 		setProfiles(currProfiles => ({
 			...currProfiles,
 			data: sortedProfiles,
 		}));
 	};
 
+	const flattenLocations = () => {
+		const flattenedLocationsArr = [];
+		const locationKeys = getLocationKeys();
+		for (let i = 0; i < profiles.data.length; i++) {
+			let profile = profiles.data[i];
+			const flattenedLocationObj = {};
+			const locationValues = getLocationValues(profile.location);
+			for (let j = 0; j < locationKeys.length; j++) {
+				let key = locationKeys[j];
+				flattenedLocationObj[key] = locationValues[j];
+			}
+			flattenedLocationsArr.push(flattenedLocationObj);
+		}
+		return flattenedLocationsArr;
+	};
+
+	const handleChange = e => {
+		flattenProfiles();
+		setQuery(e.target.value);
+		// const filteredProfiles = profiles.data.filter(profile => {
+		// 	const row = Object.values(profile.location);
+		// 	return row.some(value => {
+		// 		return value
+		// 			.toString()
+		// 			.toLowerCase()
+		// 			.includes(inputRef.current.value.toLowerCase());
+		// 	});
+		// });
+
+		// console.log('filteredProfiles', filteredProfiles);
+
+		// if (filteredProfiles.length === 0) {
+		// 	setProfiles(currProfiles => ({
+		// 		...currProfiles,
+		// 		data: profiles.data,
+		// 	}));
+		// } else {
+		// 	setProfiles(currProfiles => ({
+		// 		...currProfiles,
+		// 		data: filteredProfiles,
+		// 	}));
+		// }
+	};
+
+	const handleFiltering = () => {};
+
 	return (
 		<div className='app'>
+			<input type='text' onChange={handleChange} ref={inputRef} />
 			<table>
 				<thead>
 					<tr>
-						{getLocationKeys().map(header => (
+						{Object.keys(flattenLocations()[0]).map(header => (
 							<th key={header} onClick={() => handleSorting(header)}>
 								{header}
 							</th>
@@ -107,9 +200,9 @@ function App() {
 					</tr>
 				</thead>
 				<tbody>
-					{profiles.data.map(profile => (
-						<tr key={profile.login.uuid}>
-							{getLocationValues(profile.location).map((val, idx) => (
+					{flattenLocations().map((location, idx) => (
+						<tr key={idx}>
+							{Object.values(location)?.map((val, idx) => (
 								<td key={idx}>{val}</td>
 							))}
 						</tr>
